@@ -206,6 +206,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 			channels[10] = (serial_buf[17] >> 6) + ((serial_buf[18] & 0xff) << 2) + ((serial_buf[19] & 0b1) << 10);
 			channels[11] = (serial_buf[19] >> 1) + ((serial_buf[20] & 0b1111) << 7);
 
+			channels[12] = (serial_buf[20] >> 4) + ((serial_buf[21] & 0b1111111) << 4);
+			channels[13] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
+			channels[14] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
+			channels[15] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);
+
 
 			//10 bit
 //			channels[0] = serial_buf[3] + ((serial_buf[4] & 0b11) << 8);
