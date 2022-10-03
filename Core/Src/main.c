@@ -55,6 +55,7 @@ uint16_t wait_to_sync = 0;
 
 uint16_t channels[16];
 uint16_t sync_val = 26;
+uint8_t frame_size;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -158,62 +159,78 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	/*
-	//syncing
-	if(sync == 0 && serial_byte == 0xc8){
-		sync = 1;
+	if(serial_ptr > 49){
 		serial_ptr = 0;
-		return;
-	}
-
-	//if not sync
-	if(sync == 1 && serial_ptr == 25 && serial_byte != 0xc8){
 		sync = 0;
+		memset(serial_buf, 0, 50);
 		unsync_rate++;
-		return;
 	}
-	*/
-	serial_buf[serial_ptr] = serial_byte;
-	serial_ptr++;
-	if(serial_ptr == sync_val) serial_ptr = 0;
 
-	return;
-
-	if(sync == 0 && serial_byte == 0xc8){
+	if(serial_byte == 0xc8 && sync == 0){
+//		memset(serial_buf, 0, 50);
+		serial_buf[serial_ptr] = serial_byte;
+		serial_ptr = 1;
 		sync = 1;
-		wait_to_sync = 1;
 		return;
 	}
 
 	if(sync == 1){
-		wait_to_sync++;
-		if(wait_to_sync == 27 && serial_byte == 0xc8){
-			sync = 2;
-			serial_ptr = 1;
-			return;
-		}
-		else if(wait_to_sync == 27 && serial_byte != 0xc8){
-			sync = 0;
-			return;
-		}
+		frame_size = serial_byte;
+		serial_buf[serial_ptr] = serial_byte;
+		serial_ptr++;
+		sync = 2;
+		return;
 	}
 
 	if(sync == 2){
-		if(serial_ptr == 0 && serial_byte != 0xc8) sync = 0;
 		serial_buf[serial_ptr] = serial_byte;
 		serial_ptr++;
-		if(serial_ptr == 26){
+		if(serial_ptr >= frame_size + 1){
+			sync = 0;
 			serial_ptr = 0;
+//			frame_size = 0;
+
+			//11 bit
+			channels[0] = serial_buf[3] + ((serial_buf[4] & 0b111) << 8);
+			channels[1] = (serial_buf[4] >> 3) + ((serial_buf[5] & 0b111111) << 5);
+			channels[2] = (serial_buf[5] >> 6) + ((serial_buf[6] & 0xff) << 2) + ((serial_buf[7] & 0b1) << 10);
+			channels[3] = (serial_buf[7] >> 1) + ((serial_buf[8] & 0b1111) << 7);
+
+			channels[4] = (serial_buf[8] >> 4) + ((serial_buf[9] & 0b1111111) << 4);
+			channels[5] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
+			channels[6] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
+			channels[7] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);
+
+			channels[8] = serial_buf[15] + ((serial_buf[16] & 0b111) << 8);
+			channels[9] = (serial_buf[16] >> 3) + ((serial_buf[17] & 0b111111) << 5);
+			channels[10] = (serial_buf[17] >> 6) + ((serial_buf[18] & 0xff) << 2) + ((serial_buf[19] & 0b1) << 10);
+			channels[11] = (serial_buf[19] >> 1) + ((serial_buf[20] & 0b1111) << 7);
+
+
+			//10 bit
+//			channels[0] = serial_buf[3] + ((serial_buf[4] & 0b11) << 8);
+//			channels[1] = (serial_buf[4] >> 2) + ((serial_buf[5] & 0b1111) << 6);
+
+			//12 bit
+//			channels[0] = serial_buf[3] + ((serial_buf[4] & 0b1111) << 8);
+//			channels[1] = (serial_buf[4] >> 2) + ((serial_buf[5] & 0b1111) << 4);
 		}
 	}
 
+
+
+	//sync by reading sync byte -> very bad
 	/*
-	if(serial_ptr == 26){
+	if(serial_byte == 0xc8){
 		serial_ptr = 0;
-		channels[0] = serial_buf[0] + ((serial_buf[1] & 0b111) << 8);
+		memset(serial_buf, 0, 50);
 	}
-	*/
-//	HAL_UART_Receive_DMA(&huart4, &serial_byte, 1);
+
+	serial_buf[serial_ptr] = serial_byte;
+	serial_ptr++;
+*/
+
+
 }
 /* USER CODE END 4 */
 
