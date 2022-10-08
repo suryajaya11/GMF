@@ -48,6 +48,7 @@
 uint8_t serial_byte;
 uint8_t serial_ptr;
 uint8_t serial_buf[50];
+uint8_t serial_buf_channels[25];
 uint8_t sync = 0;
 
 uint32_t unsync_rate = 0;
@@ -186,31 +187,36 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		serial_buf[serial_ptr] = serial_byte;
 		serial_ptr++;
 		if(serial_ptr >= frame_size + 1){
+			memcpy(serial_buf_channels, serial_buf, 25);
 			sync = 0;
 			serial_ptr = 0;
 //			frame_size = 0;
 
+			if(frame_size == 24){
 			//11 bit
-			channels[0] = serial_buf[3] + ((serial_buf[4] & 0b111) << 8);
-			channels[1] = (serial_buf[4] >> 3) + ((serial_buf[5] & 0b111111) << 5);
-			channels[2] = (serial_buf[5] >> 6) + ((serial_buf[6] & 0xff) << 2) + ((serial_buf[7] & 0b1) << 10);
-			channels[3] = (serial_buf[7] >> 1) + ((serial_buf[8] & 0b1111) << 7);
+				channels[0] = (serial_buf[3] + ((serial_buf[4] & 0b111) << 8)) >> 1;
+				channels[1] = ((serial_buf[4] >> 3) + ((serial_buf[5] & 0b111111) << 5) >> 1);
+				channels[2] = (serial_buf[5] >> 6) + ((serial_buf[6] & 0xff) << 2) + ((serial_buf[7] & 0b1) << 10);
+				channels[3] = (serial_buf[7] >> 1) + ((serial_buf[8] & 0b1111) << 7);
 
-			channels[4] = (serial_buf[8] >> 4) + ((serial_buf[9] & 0b1111111) << 4);
-			channels[5] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
-			channels[6] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
-			channels[7] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);
+				channels[4] = (serial_buf[8] >> 4) + ((serial_buf[9] & 0b1111111) << 4);
+				channels[5] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
+				channels[6] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
+//				channels[7] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);		//bit 7 dari byte[12] dan
 
-			channels[8] = serial_buf[15] + ((serial_buf[16] & 0b111) << 8);
-			channels[9] = (serial_buf[16] >> 3) + ((serial_buf[17] & 0b111111) << 5);
-			channels[10] = (serial_buf[17] >> 6) + ((serial_buf[18] & 0xff) << 2) + ((serial_buf[19] & 0b1) << 10);
-			channels[11] = (serial_buf[19] >> 1) + ((serial_buf[20] & 0b1111) << 7);
+//				channels[8] = serial_buf[15] + ((serial_buf[16] & 0b111) << 8);
+				channels[9] = (serial_buf[16] >> 3) + ((serial_buf[17] & 0b111111) << 5);
+				channels[10] = (serial_buf[17] >> 6) + ((serial_buf[18] & 0xff) << 2) + ((serial_buf[19] & 0b1) << 10);
+				channels[11] = (serial_buf[19] >> 1) + ((serial_buf[20] & 0b1111) << 7);
 
-			channels[12] = (serial_buf[20] >> 4) + ((serial_buf[21] & 0b1111111) << 4);
-			channels[13] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
-			channels[14] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
-			channels[15] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);
+				channels[12] = (serial_buf[20] >> 4) + ((serial_buf[21] & 0b1111111) << 4);
+				channels[13] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
+				channels[14] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
+				channels[15] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);
 
+				channels[7] = (serial_buf[12] >> 7) + (serial_buf[13] << 1);
+				channels[8] = (serial_buf[14]) + (serial_buf[15] & 0b111) << 8;
+			}
 
 			//10 bit
 //			channels[0] = serial_buf[3] + ((serial_buf[4] & 0b11) << 8);
