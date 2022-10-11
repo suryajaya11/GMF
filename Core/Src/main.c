@@ -25,7 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,6 +50,8 @@ uint8_t serial_byte;
 uint8_t serial_ptr;
 uint8_t serial_buf[50];
 uint8_t serial_buf_channels[25];
+uint8_t serial_buf_changed[25];
+int8_t clear_buf = 0;
 uint8_t sync = 0;
 
 uint32_t unsync_rate = 0;
@@ -80,7 +83,7 @@ int main(void)
 
   /* USER CODE END 1 */
 
-  /* MCU Configu	ration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -108,6 +111,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(clear_buf){
+		  clear_buf = 0;
+		  memset(serial_buf_changed, 0, 25);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -187,35 +194,75 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		serial_buf[serial_ptr] = serial_byte;
 		serial_ptr++;
 		if(serial_ptr >= frame_size + 1){
-			memcpy(serial_buf_channels, serial_buf, 25);
 			sync = 0;
 			serial_ptr = 0;
 //			frame_size = 0;
 
 			if(frame_size == 24){
+				for(int i = 0; i < 25; i++){
+					if(serial_buf_channels[i] == serial_buf[i]) continue;
+
+					for(int bit = 0; bit < 8; bit++){
+						if(((serial_buf_channels[i] >> bit) & 1) != ((serial_buf[i] >> bit) & 1)) serial_buf_changed[i] |= 1 << bit;
+					}
+				}
+				memcpy(serial_buf_channels, serial_buf, 25);
 			//11 bit
-				channels[0] = (serial_buf[3] + ((serial_buf[4] & 0b111) << 8)) >> 1;
-				channels[1] = ((serial_buf[4] >> 3) + ((serial_buf[5] & 0b111111) << 5) >> 1);
+			//analog
+				channels[0] = (serial_buf[3] + ((serial_buf[4] & 0b111) << 8)) >> 0;
+				channels[1] = ((serial_buf[4] >> 3) + ((serial_buf[5] & 0b111111) << 5) >> 0);
 				channels[2] = (serial_buf[5] >> 6) + ((serial_buf[6] & 0xff) << 2) + ((serial_buf[7] & 0b1) << 10);
 				channels[3] = (serial_buf[7] >> 1) + ((serial_buf[8] & 0b1111) << 7);
 
-				channels[4] = (serial_buf[8] >> 4) + ((serial_buf[9] & 0b1111111) << 4);
-				channels[5] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
-				channels[6] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
+//				channels[4] = (serial_buf[8] >> 4) + ((serial_buf[9] & 0b1111111) << 4);
+//				channels[5] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
+//				channels[6] = (serial_buf[11] >> 3) + ((serial_buf[12] & 0b11111) << 5);
 //				channels[7] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);		//bit 7 dari byte[12] dan
 
 //				channels[8] = serial_buf[15] + ((serial_buf[16] & 0b111) << 8);
-				channels[9] = (serial_buf[16] >> 3) + ((serial_buf[17] & 0b111111) << 5);
-				channels[10] = (serial_buf[17] >> 6) + ((serial_buf[18] & 0xff) << 2) + ((serial_buf[19] & 0b1) << 10);
-				channels[11] = (serial_buf[19] >> 1) + ((serial_buf[20] & 0b1111) << 7);
+//				channels[9] = (serial_buf[16] >> 3) + ((serial_buf[17] & 0b111111) << 5);
+//				channels[10] = (serial_buf[17] >> 6) + ((serial_buf[18] & 0xff) << 2) + ((serial_buf[19] & 0b1) << 10);
+//				channels[11] = (serial_buf[19] >> 1) + ((serial_buf[20] & 0b1111) << 7);
+//
+//				channels[12] = (serial_buf[20] >> 4) + ((serial_buf[21] & 0b1111111) << 4);
+//				channels[13] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
+//				channels[14] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
+//				channels[15] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);
 
-				channels[12] = (serial_buf[20] >> 4) + ((serial_buf[21] & 0b1111111) << 4);
-				channels[13] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
-				channels[14] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
-				channels[15] = (serial_buf[13] >> 5) + (serial_buf[14] << 3);
+			//switches
+				//sw E
+				channels[4] = (serial_buf[8] >> 4) + ((serial_buf[9] & 0b1111111) << 4);
 
-				channels[7] = (serial_buf[12] >> 7) + (serial_buf[13] << 1);
-				channels[8] = (serial_buf[14]) + (serial_buf[15] & 0b111) << 8;
+				//sw F
+				channels[5] = (serial_buf[9] >> 7) + (serial_buf[10] << 1) + ((serial_buf[11] & 0b11) << 9);
+
+				//sw B
+				channels[6] = (serial_buf[11] >> 2) + ((serial_buf[12] & 0b11111) << 6);
+
+				//sw C
+				channels[7] = (serial_buf[12] >> 5) + ((serial_buf[13] << 3));
+
+				//sw(button) A
+				channels[8] = (serial_buf[14]) + ((serial_buf[15] & 0b111) << 8);
+
+				//sw(button) D
+				channels[9] = (serial_buf[15] >> 3) + ((serial_buf[16] & 0b111111) << 5);
+
+				//sw(button) G
+				channels[10] = ((serial_buf[16]) >> 6) + (serial_buf[17] << 2) + ((serial_buf[18] & 1) << 10);
+
+				//sw(button) H
+				channels[11] = (serial_buf[18] >> 1) + ((serial_buf[19] & 0b1111) << 7);
+
+				//potensio S1 (kiri)
+				channels[12] = (serial_buf[19] >> 4) + ((serial_buf[20] & 0b1111111) << 4);
+
+				//potensio S2 (kanan)
+				//ga ada berubah??
+
+//				channels[6] = (serial_buf[11] >> 3) + ((serial_buf[12] & 0b11111) << 5);
+//				channels[7] = (serial_buf[12] >> 6) + (serial_buf[13] << 2);
+//				channels[8] = (serial_buf[14]) + (serial_buf[15] & 0b111) << 8;
 			}
 
 			//10 bit

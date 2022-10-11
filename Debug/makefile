@@ -61,8 +61,8 @@ all: main-build
 main-build: GMF.elf secondary-outputs
 
 # Tool invocations
-GMF.elf: $(OBJS) $(USER_OBJS) /home/surya/STM32CubeIDE/workspace_1.7.0/GMF/STM32F405RGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "GMF.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/surya/STM32CubeIDE/workspace_1.7.0/GMF/STM32F405RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="GMF.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+GMF.elf: $(OBJS) $(USER_OBJS) C:\Users\Surya\Documents\STMCubeIDE_clone\GMF\STM32F405RGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "GMF.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Surya\Documents\STMCubeIDE_clone\GMF\STM32F405RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="GMF.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
