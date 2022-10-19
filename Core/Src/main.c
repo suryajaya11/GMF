@@ -51,6 +51,7 @@ uint8_t serial_ptr;
 uint8_t serial_buf[50];
 uint8_t serial_buf_channels[25];
 uint8_t serial_buf_changed[25];
+uint8_t serial_buf_lq[25];
 int8_t clear_buf = 0;
 uint8_t sync = 0;
 
@@ -175,7 +176,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	}
 
 	if(serial_byte == 0xc8 && sync == 0){
-//		memset(serial_buf, 0, 50);
+		memset(serial_buf, 0, 50);
 		serial_buf[serial_ptr] = serial_byte;
 		serial_ptr = 1;
 		sync = 1;
@@ -183,6 +184,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	}
 
 	if(sync == 1){
+		if(serial_byte > 50){
+			serial_ptr = 0;
+			sync = 0;
+			return;
+		}
 		frame_size = serial_byte;
 		serial_buf[serial_ptr] = serial_byte;
 		serial_ptr++;
@@ -198,7 +204,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 			serial_ptr = 0;
 //			frame_size = 0;
 
-			if(frame_size == 24){
+			if(frame_size == 24 && serial_buf[2] == 0x16){
 				for(int i = 0; i < 25; i++){
 					if(serial_buf_channels[i] == serial_buf[i]) continue;
 
@@ -210,7 +216,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 			//11 bit
 			//analog
 				channels[0] = (serial_buf[3] + ((serial_buf[4] & 0b111) << 8)) >> 0;
-				channels[1] = ((serial_buf[4] >> 3) + ((serial_buf[5] & 0b111111) << 5) >> 0);
+				channels[1] = (serial_buf[4] >> 3) + (((serial_buf[5] & 0b111111) << 5) >> 0);
 				channels[2] = (serial_buf[5] >> 6) + ((serial_buf[6] & 0xff) << 2) + ((serial_buf[7] & 0b1) << 10);
 				channels[3] = (serial_buf[7] >> 1) + ((serial_buf[8] & 0b1111) << 7);
 
@@ -265,30 +271,18 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 //				channels[8] = (serial_buf[14]) + (serial_buf[15] & 0b111) << 8;
 			}
 
-			//10 bit
-//			channels[0] = serial_buf[3] + ((serial_buf[4] & 0b11) << 8);
-//			channels[1] = (serial_buf[4] >> 2) + ((serial_buf[5] & 0b1111) << 6);
-
-			//12 bit
-//			channels[0] = serial_buf[3] + ((serial_buf[4] & 0b1111) << 8);
-//			channels[1] = (serial_buf[4] >> 2) + ((serial_buf[5] & 0b1111) << 4);
+			if(serial_buf[2] == 0x14){
+				memcpy(serial_buf_lq, serial_buf, serial_buf[1] + 1);
+			}
 		}
+
 	}
+}
 
-
-
-	//sync by reading sync byte -> very bad
-	/*
-	if(serial_byte == 0xc8){
-		serial_ptr = 0;
-		memset(serial_buf, 0, 50);
-	}
-
-	serial_buf[serial_ptr] = serial_byte;
-	serial_ptr++;
-*/
-
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
+   	if(htim->Instance == TIM3){
+   		tim_called++;
+   	}
 }
 /* USER CODE END 4 */
 
